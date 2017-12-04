@@ -1,0 +1,156 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven { url = "http://files.minecraftforge.net/maven" }
+        maven { url = "http://maven.modmuss50.me/" }
+    }
+    dependencies { 
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.0'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+
+def modver = major + "." + minor + "." + patch
+version = mcver + "-" + modver + "-CustomBuild"
+
+def ENV = System.getenv()
+if (ENV.BUILD_NUMBER) {
+    version = mcver + "-" + modver + "-" + "${System.getenv().BUILD_NUMBER}"
+}
+
+def ver = version
+
+group = prefix + "." + id
+archivesBaseName = jarname
+
+sourceCompatibility = targetCompatibility = "1.8"
+compileJava {
+    sourceCompatibility = targetCompatibility = "1.8"
+}
+
+minecraft {
+    version = mcver + "-" + forgever
+    runDir = "run"
+    mappings = mcp
+
+    replaceIn "IRConstants.java"
+    replace "@version@", project.version
+    replace "@major@", project.major
+    replace "@minor@", project.minor
+    replace "@patch@", project.patch
+    replace "@mcversion@", project.mcver
+
+    if (project.hasProperty('mappings_version'))
+        mappings = project.mappings_version
+}
+
+repositories {
+    maven {
+        name = "Modmuss50"
+        url = "http://maven.modmuss50.me/"
+    }
+    maven {
+        name = "Player"
+        url = "http://maven.ic2.player.to/"
+    }
+    maven {
+        name = "Prog"
+        url = "http://dvs1.progwml6.com/files/maven/"
+    }
+}
+
+dependencies {
+    compile "prospector.shootingstar:ShootingStar:" + mcver + "-" + starver
+    deobfCompile "net.industrial-craft:industrialcraft-2:" + ic2ver
+    deobfCompile "mezz.jei:jei_" + mcver + ":" + jeiver
+}
+
+shadowJar {
+    exclude 'META-INF/*', 'META-INF/maven/**'
+    relocate 'prospector.shootingstar', prefix + '.' + id + '.shadow.shootingstar'
+    classifier=''
+}
+
+reobf {
+    shadowJar { mappingType = 'SEARGE' }
+}
+
+tasks.build.dependsOn reobfShadowJar
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include '**/*.info'
+        include '**/*.properties'
+
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude '**/*.info'
+        exclude '**/*.properties'
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            if (project.hasProperty('mavenPass')) {
+                println 'Uploading to remote Maven Repo'
+                repository(url: "http://mavenupload.modmuss50.me/") {
+                    authentication(userName: "buildslave", password: project.getProperty('mavenPass'))
+                }
+            } else {
+                println 'Uploading to local Maven Repo'
+                repository(url: "file:///var/www/maven/")
+            }
+            pom {
+                groupId = project.group
+                version = project.version
+                artifactId = project.archivesBaseName
+                project {
+                    name project.archivesBaseName
+                    packaging 'jar'
+                    description 'Crystek'
+                    url 'https://github.com/CrystekTeam/Crystek'
+                    scm {
+                        url 'https://github.com/CrystekTeam/Crystek'
+                        connection 'scm:git:git@github.com:CrystekTeam/Crystek.git'
+                        developerConnection 'scm:git:git@github.com:CrystekTeam/Crystek.git'
+                    }
+                    issueManagement {
+                        system 'github'
+                        url 'https://github.com/CrystekTeam/Crystek/issues'
+                    }
+                    licenses {
+                        license {
+                            name 'License'
+                            url 'https://raw.githubusercontent.com/CrystekTeam/Crystek/master/LICENSE.md'
+                            distribution 'repo'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id 'ProfessorProspector'
+                            name 'Prospector'
+                            roles {role 'developer'}
+                        }
+                        developer {
+                            id 'Gigabit101'
+                            name 'Gigabit101'
+                            roles {role 'developer'}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

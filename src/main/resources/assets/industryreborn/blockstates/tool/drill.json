@@ -1,0 +1,16 @@
+{
+	"forge_marker": 1,
+	"defaults": {
+		"transform": "forge:default-tool",
+		"model": "industryreborn:item"
+	},
+	"variants": {
+		"type": {
+			"advanced": {
+				"textures": {
+					"item": "industryreborn:item/tool/drill/advanced"
+				}
+			}
+		}
+	}
+}
